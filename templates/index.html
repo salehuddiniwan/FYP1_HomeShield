@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HomeShield — Smart Surveillance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --bg:#04060f;
+  --sidebar-w:220px;
+  --topbar-h:70px;
+  --surface:rgba(255,255,255,0.04);
+  --surface-mid:rgba(255,255,255,0.07);
+  --surface-high:rgba(255,255,255,0.11);
+  --glass-border:rgba(255,255,255,0.09);
+  --glass-border-bright:rgba(255,255,255,0.17);
+  --text:#e8ecf8;
+  --text-dim:#6b7590;
+  --primary:#3b82f6;
+  --primary-glow:rgba(59,130,246,0.3);
+  --danger:#f43f5e;
+  --danger-glow:rgba(244,63,94,0.3);
+  --warning:#f59e0b;
+  --success:#10b981;
+  --success-glow:rgba(16,185,129,0.3);
+  --radius:13px;
+  --radius-sm:8px;
+  --blur:saturate(160%) blur(20px);
+}
+
+body{
+  font-family:'Syne',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+body::before{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 70% 55% at 8% 12%,rgba(59,130,246,0.10) 0%,transparent 60%),
+    radial-gradient(ellipse 55% 45% at 92% 85%,rgba(16,185,129,0.07) 0%,transparent 55%),
+    radial-gradient(ellipse 45% 40% at 55% 55%,rgba(244,63,94,0.04) 0%,transparent 60%);
+  pointer-events:none;z-index:0;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px);
+  background-size:60px 60px;
+  pointer-events:none;z-index:0;
+}
+
+/* ══ SIDEBAR ══ */
+.sidebar{
+  position:fixed;top:0;left:0;bottom:0;
+  width:var(--sidebar-w);
+  background:rgba(4,6,15,0.85);
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border-right:1px solid var(--glass-border);
+  display:flex;flex-direction:column;
+  z-index:200;
+}
+
+.sidebar-logo{
+  display:flex;align-items:center;gap:10px;
+  padding:18px 20px 16px;
+  border-bottom:1px solid var(--glass-border);
+  font-size:16px;font-weight:800;letter-spacing:-0.3px;
+}
+.sidebar-logo svg{width:28px;height:28px;flex-shrink:0;filter:drop-shadow(0 0 7px rgba(59,130,246,0.65))}
+.sidebar-logo .ver{font-size:9px;color:var(--text-dim);font-weight:400;font-family:'Space Mono',monospace;display:block;margin-top:1px}
+
+.sidebar-section{
+  font-size:9px;text-transform:uppercase;letter-spacing:1.4px;
+  color:var(--text-dim);font-family:'Space Mono',monospace;
+  padding:18px 20px 6px;
+}
+
+.nav-item{
+  display:flex;align-items:center;gap:11px;
+  padding:10px 20px;border:none;background:none;
+  color:var(--text-dim);font-family:'Syne',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;
+  width:100%;text-align:left;position:relative;
+  transition:all .18s ease;
+}
+.nav-item:hover{color:var(--text);background:var(--surface-mid)}
+.nav-item.active{
+  color:var(--text);
+  background:linear-gradient(90deg,rgba(59,130,246,0.12),rgba(59,130,246,0.04));
+}
+.nav-item.active::before{
+  content:'';position:absolute;left:0;top:4px;bottom:4px;
+  width:3px;border-radius:0 3px 3px 0;
+  background:var(--primary);box-shadow:0 0 10px var(--primary-glow);
+}
+.nav-item svg{width:16px;height:16px;opacity:0.7;flex-shrink:0}
+.nav-item.active svg{opacity:1}
+
+.sidebar-bottom{
+  margin-top:auto;padding:16px 20px;
+  border-top:1px solid var(--glass-border);
+}
+.sys-status{
+  display:flex;align-items:center;gap:9px;
+  padding:10px 12px;
+  background:var(--surface);border:1px solid var(--glass-border);
+  border-radius:var(--radius-sm);margin-bottom:10px;
+}
+.status-dot{
+  width:7px;height:7px;border-radius:50%;flex-shrink:0;
+  background:var(--success);box-shadow:0 0 7px var(--success-glow);
+  animation:blink 2s infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.status-dot.off{background:var(--text-dim);box-shadow:none;animation:none}
+.s-label{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;font-family:'Space Mono',monospace}
+.s-val{font-size:12px;font-weight:700;color:var(--text)}
+
+/* ══ TOPBAR ══ */
+.topbar{
+  position:fixed;top:0;left:var(--sidebar-w);right:0;
+  height:var(--topbar-h);
+  background:rgba(4,6,15,0.7);
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border-bottom:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 30px;z-index:100;
+}
+.topbar-title{font-size:18px;font-weight:800;letter-spacing:-0.3px}
+.topbar-stats{display:flex;align-items:center;gap:0}
+.topbar-stat{
+  display:flex;flex-direction:column;align-items:flex-end;
+  padding:0 18px;
+}
+.topbar-stat:not(:last-child){border-right:1px solid var(--glass-border)}
+.topbar-stat .ts-label{font-size:9px;color:var(--text-dim);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:1px}
+.topbar-stat .ts-val{font-size:16px;font-weight:800;letter-spacing:-0.5px}
+
+/* ══ MAIN ══ */
+.main{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);min-height:100vh;position:relative;z-index:1}
+.content{padding:22px 24px}
+.page{display:none}.page.active{display:block}
+
+/* ══ BUTTONS ══ */
+.btn{
+  padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--glass-border-bright);background:var(--surface-mid);
+  cursor:pointer;font-size:12px;font-weight:600;
+  font-family:'Syne',sans-serif;color:var(--text);transition:all .18s ease;
+}
+.btn:hover{background:var(--surface-high);border-color:rgba(255,255,255,0.24)}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 0 12px var(--primary-glow)}
+.btn-primary:hover{background:#2563eb;box-shadow:0 0 20px var(--primary-glow)}
+.btn-danger{background:rgba(244,63,94,0.14);color:var(--danger);border-color:rgba(244,63,94,0.28)}
+.btn-danger:hover{background:rgba(244,63,94,0.22);box-shadow:0 0 10px var(--danger-glow)}
+.btn-sm{padding:5px 11px;font-size:11px}
+.btn-full{width:100%;display:flex;align-items:center;justify-content:center}
+
+/* ══ METRICS ══ */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:20px}
+.metric{
+  background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);border-radius:var(--radius);
+  padding:16px 20px;position:relative;overflow:hidden;transition:border-color .2s;
+}
+.metric::after{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,transparent,var(--primary),transparent);opacity:0.45}
+.metric:hover{border-color:var(--glass-border-bright)}
+.metric-label{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.2px;font-family:'Space Mono',monospace;margin-bottom:7px}
+.metric-value{font-size:28px;font-weight:800;letter-spacing:-1.2px}
+.metric-value.success{color:var(--success);text-shadow:0 0 18px var(--success-glow)}
+.metric-value.danger{color:var(--danger);text-shadow:0 0 18px var(--danger-glow)}
+
+/* ══ LIVE PAGE LAYOUT ══ */
+.live-layout{
+  display:flex;
+  flex-direction:row;
+  gap:0;
+  min-height:0;
+}
+
+/* Resizable divider */
+.live-divider{
+  width:6px;
+  flex-shrink:0;
+  cursor:col-resize;
+  background:transparent;
+  border-radius:3px;
+  margin:0 5px;
+  position:relative;
+  transition:background .15s;
+}
+.live-divider::after{
+  content:'';
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:2px;height:40px;
+  background:var(--glass-border-bright);
+  border-radius:2px;
+  transition:background .15s, height .15s;
+}
+.live-divider:hover::after,.live-divider.dragging::after{
+  background:var(--primary);
+  height:60px;
+  box-shadow:0 0 8px var(--primary-glow);
+}
+
+/* Hero takes remaining space, sidebar has explicit width */
+.hero-col{flex:1;min-width:200px;display:flex;flex-direction:column}
+.thumb-col{width:290px;min-width:160px;max-width:600px;flex-shrink:0;display:flex;flex-direction:column;gap:11px}
+
+/* Hero feed */
+.hero-feed{
+  grid-column:1;grid-row:1;
+  background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);border-radius:var(--radius);
+  overflow:hidden;transition:border-color .2s;
+}
+.hero-feed:hover{border-color:var(--glass-border-bright)}
+.hero-screen{background:#060911;aspect-ratio:16/9;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.hero-screen img{width:100%;height:100%;object-fit:cover;display:block}
+.hero-overlay{position:absolute;top:10px;left:10px;display:flex;gap:7px}
+.live-pill{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(4,6,15,0.78);backdrop-filter:blur(8px);
+  border:1px solid var(--glass-border-bright);border-radius:20px;
+  padding:3px 10px;font-size:9px;font-weight:700;font-family:'Space Mono',monospace;
+}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--danger);animation:blink 1s infinite}
+.live-dot.offline{background:var(--text-dim);animation:none}
+.hero-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 15px;border-top:1px solid var(--glass-border);
+}
+.hero-cam-name{font-size:13px;font-weight:700}
+.hero-cam-loc{font-size:10px;color:var(--text-dim);font-family:'Space Mono',monospace;margin-top:1px}
+.feed-badge{font-size:9px;padding:2px 9px;border-radius:20px;font-weight:700;font-family:'Space Mono',monospace;flex-shrink:0}
+.feed-badge.live{background:rgba(16,185,129,0.12);color:var(--success);border:1px solid rgba(16,185,129,0.28)}
+.feed-badge.alert{background:rgba(244,63,94,0.12);color:var(--danger);border:1px solid rgba(244,63,94,0.28);animation:blink 1s infinite}
+
+/* Thumbnail panel */
+.thumb-panel{
+  grid-column:2;grid-row:1 / 3;
+  display:flex;flex-direction:column;gap:11px;
+  overflow-y:auto;
+}
+.thumb-panel::-webkit-scrollbar{width:3px}
+.thumb-panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:10px}
+
+.thumb-card{
+  background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;transition:all .2s ease;flex-shrink:0;
+}
+.thumb-card:hover{border-color:var(--glass-border-bright);transform:translateX(-2px)}
+.thumb-card.selected{border-color:rgba(59,130,246,0.45);box-shadow:0 0 16px rgba(59,130,246,0.1)}
+.thumb-card.alert-cam{border-color:rgba(244,63,94,0.4)}
+.thumb-screen{background:#060911;aspect-ratio:16/9;position:relative;overflow:hidden}
+.thumb-screen img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb-offline{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim);font-size:10px;font-family:'Space Mono',monospace}
+.thumb-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 10px;border-top:1px solid var(--glass-border);
+}
+.thumb-name{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Live log under hero */
+.live-log{
+  grid-column:1;grid-row:2;
+  background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);border-radius:var(--radius);overflow:hidden;
+}
+
+/* ══ LOG SHARED ══ */
+.log{
+  background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);border-radius:var(--radius);overflow:hidden;
+}
+.log-header{
+  padding:13px 20px;border-bottom:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.log-header h3{font-size:14px;font-weight:700}
+.log-filters{display:flex;gap:7px}
+.log-filters select{
+  padding:5px 10px;border:1px solid var(--glass-border-bright);
+  border-radius:var(--radius-sm);font-size:11px;
+  background:var(--surface-mid);color:var(--text);font-family:'Syne',sans-serif;cursor:pointer;
+}
+.log-row{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 20px;border-bottom:1px solid rgba(255,255,255,0.04);
+  font-size:12px;cursor:pointer;transition:background .12s;
+}
+.log-row:hover{background:var(--surface-mid)}
+.log-row:last-child{border-bottom:none}
+.badge{font-size:9px;padding:2px 9px;border-radius:20px;font-weight:700;white-space:nowrap;font-family:'Space Mono',monospace;letter-spacing:0.3px}
+.badge-danger{background:rgba(244,63,94,0.13);color:#fb7185;border:1px solid rgba(244,63,94,0.22)}
+.badge-warning{background:rgba(245,158,11,0.10);color:#fbbf24;border:1px solid rgba(245,158,11,0.22)}
+.badge-success{background:rgba(16,185,129,0.10);color:#34d399;border:1px solid rgba(16,185,129,0.22)}
+.badge-info{background:rgba(59,130,246,0.10);color:#60a5fa;border:1px solid rgba(59,130,246,0.22)}
+.log-desc{flex:1;color:var(--text)}
+.log-time{color:var(--text-dim);font-size:10px;white-space:nowrap;font-family:'Space Mono',monospace}
+.log-conf{font-size:11px;font-weight:700;font-family:'Space Mono',monospace;color:var(--primary)}
+.log-snap{width:38px;height:28px;border-radius:5px;object-fit:cover;cursor:pointer;border:1px solid var(--glass-border);transition:transform .15s}
+.log-snap:hover{transform:scale(1.12)}
+
+/* ══ SETTINGS ══ */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.settings-card{
+  background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);border-radius:var(--radius);padding:22px;
+  transition:border-color .2s;
+}
+.settings-card:hover{border-color:var(--glass-border-bright)}
+.settings-card h3{font-size:14px;font-weight:700;margin-bottom:15px;padding-bottom:12px;border-bottom:1px solid var(--glass-border)}
+.form-group{margin-bottom:13px}
+.form-group label{
+  display:block;font-size:9px;color:var(--text-dim);margin-bottom:6px;
+  font-weight:600;text-transform:uppercase;letter-spacing:1px;font-family:'Space Mono',monospace;
+}
+.form-group input,.form-group textarea,.form-group select{
+  width:100%;padding:9px 12px;
+  border:1px solid var(--glass-border-bright);border-radius:var(--radius-sm);
+  font-size:13px;background:var(--surface-mid);color:var(--text);
+  font-family:'Syne',sans-serif;transition:all .18s;
+}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{
+  outline:none;border-color:var(--primary);
+  box-shadow:0 0 0 3px var(--primary-glow);background:var(--surface-high);
+}
+.form-group input::placeholder,.form-group textarea::placeholder{color:var(--text-dim)}
+
+/* ══ CAMERAS ══ */
+.cam-list{display:flex;flex-direction:column;gap:7px}
+.cam-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border:1px solid var(--glass-border);border-radius:var(--radius-sm);
+  background:rgba(255,255,255,0.02);
+}
+.cam-item .cam-info{flex:1}
+.cam-item .cam-info strong{font-size:13px;font-weight:700}
+.cam-item .cam-info small{color:var(--text-dim);font-size:10px;display:block;margin-top:1px;font-family:'Space Mono',monospace}
+
+/* ══ ZONES ══ */
+.zone-canvas-wrap{
+  background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);border-radius:var(--radius);padding:20px;
+}
+.zone-list{display:flex;flex-direction:column;gap:7px;margin-top:14px}
+.zone-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 12px;background:rgba(245,158,11,0.06);
+  border:1px solid rgba(245,158,11,0.18);border-radius:var(--radius-sm);font-size:12px;
+}
+select{
+  background:var(--surface-mid);color:var(--text);
+  border:1px solid var(--glass-border-bright);border-radius:var(--radius-sm);
+  font-family:'Syne',sans-serif;padding:9px 12px;
+}
+
+/* ══ MODAL ══ */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.72);backdrop-filter:blur(10px);
+  z-index:400;align-items:center;justify-content:center;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:rgba(8,12,28,0.96);backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border-bright);border-radius:18px;padding:26px;
+  max-width:480px;width:90%;max-height:80vh;overflow-y:auto;
+  box-shadow:0 30px 80px rgba(0,0,0,0.6),0 0 40px rgba(59,130,246,0.07);
+}
+.modal h3{margin-bottom:14px;font-size:16px;font-weight:700}
+.modal img{width:100%;border-radius:9px;border:1px solid var(--glass-border)}
+.modal p{margin-top:10px;font-size:12px;color:var(--text-dim);font-family:'Space Mono',monospace}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.09);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.16)}
+
+@media(max-width:900px){
+  .sidebar{width:220px;transform:translateX(-220px);transition:transform .25s}
+  .sidebar.open{transform:translateX(0)}
+  .topbar,.main{left:0;margin-left:0}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .live-layout{flex-direction:column}
+  .live-divider{display:none}
+  .hero-col,.thumb-col{width:100%!important;min-width:0}
+  .thumb-col{flex-direction:row;overflow-x:auto}
+  .thumb-card{min-width:200px}
+  .settings-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <svg viewBox="0 0 32 32" fill="none">
+      <path d="M16 2L4 8v8c0 7.7 5.1 14.4 12 16 6.9-1.6 12-8.3 12-16V8L16 2z" stroke="#3b82f6" stroke-width="1.8" fill="rgba(59,130,246,0.08)"/>
+      <circle cx="16" cy="15" r="4" fill="rgba(59,130,246,0.22)"/>
+      <path d="M16 12v4m-2-2h4" stroke="#3b82f6" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+    <div>HomeShield <span class="ver">v1.0</span></div>
+  </div>
+
+  <span class="sidebar-section">Monitor</span>
+  <button class="nav-item active" onclick="showPage('live',this)">
+    <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M6 14h4M8 11v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    Live feeds
+  </button>
+  <button class="nav-item" onclick="showPage('events',this)">
+    <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    Events
+  </button>
+
+  <span class="sidebar-section">Configure</span>
+  <button class="nav-item" onclick="showPage('zones',this)">
+    <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="5" y="5" width="6" height="6" rx="0.5" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 1"/></svg>
+    Zones
+  </button>
+  <button class="nav-item" onclick="showPage('persons',this)">
+    <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="2.8" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    Persons
+  </button>
+  <button class="nav-item" onclick="showPage('settings',this)">
+    <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M11.36 4.64l-1.42 1.42M4.64 11.36l-1.42 1.42" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    Settings
+  </button>
+
+  <div class="sidebar-bottom">
+    <div class="sys-status">
+      <div class="status-dot" id="statusDot"></div>
+      <div style="flex:1">
+        <div class="s-label">System</div>
+        <div class="s-val" id="statusText">Starting…</div>
+      </div>
+    </div>
+    <button class="btn btn-danger btn-full" id="toggleBtn" onclick="toggleSystem()">Stop system</button>
+  </div>
+</aside>
+
+<!-- ══ TOPBAR ══ -->
+<header class="topbar">
+  <div class="topbar-title" id="topbarTitle">Live feeds</div>
+  <div class="topbar-stats">
+    <div class="topbar-stat"><div class="ts-label">Cameras</div><div class="ts-val" style="color:var(--success)" id="tb-cameras">–</div></div>
+    <div class="topbar-stat"><div class="ts-label">Alerts</div><div class="ts-val" style="color:var(--danger)" id="tb-alerts">–</div></div>
+    <div class="topbar-stat"><div class="ts-label">People</div><div class="ts-val" id="tb-people">–</div></div>
+    <div class="topbar-stat"><div class="ts-label">Model</div><div class="ts-val" id="tb-model" style="font-size:11px;letter-spacing:0;color:var(--primary);font-family:'Space Mono',monospace">–</div></div>
+  </div>
+</header>
+
+<!-- ══ MAIN ══ -->
+<main class="main">
+<div class="content">
+
+  <!-- LIVE PAGE -->
+  <div class="page active" id="page-live">
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Cameras online</div><div class="metric-value success" id="m-cameras">–</div></div>
+      <div class="metric"><div class="metric-label">Alerts today</div><div class="metric-value danger" id="m-alerts">0</div></div>
+      <div class="metric"><div class="metric-label">People detected</div><div class="metric-value" id="m-people">0</div></div>
+      <div class="metric"><div class="metric-label">System status</div><div class="metric-value success" id="m-status">Active</div></div>
+    </div>
+
+    <!-- Feed row: hero + divider + thumbnails always side by side -->
+    <div class="live-layout" id="liveLayout">
+
+      <!-- Hero column -->
+      <div class="hero-col">
+        <div class="hero-feed">
+          <div class="hero-screen" id="heroScreen">
+            <div class="hero-overlay" id="heroOverlay">
+              <div class="live-pill"><div class="live-dot"></div><span id="heroPillText">LIVE</span></div>
+            </div>
+            <span style="color:var(--text-dim);font-size:12px;font-family:'Space Mono',monospace">No cameras configured</span>
+          </div>
+          <div class="hero-bar">
+            <div>
+              <div class="hero-cam-name" id="heroCamName">–</div>
+              <div class="hero-cam-loc" id="heroCamLoc">–</div>
+            </div>
+            <span class="feed-badge live" id="heroBadge">LIVE</span>
+          </div>
+        </div>
+      </div><!-- /hero-col -->
+
+      <!-- Drag divider -->
+      <div class="live-divider" id="liveDivider" title="Drag to resize · Double-click to reset"></div>
+
+      <!-- Thumbnail column -->
+      <div class="thumb-col" id="thumbCol">
+        <div class="thumb-panel" id="thumbPanel"></div>
+
+        <!-- Quick add camera -->
+        <div class="thumb-card" id="addCamPanel" style="padding:13px;flex-shrink:0">
+          <div style="font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;font-family:'Space Mono',monospace;margin-bottom:10px">+ Add camera</div>
+          <div style="display:flex;flex-direction:column;gap:7px" id="addCamForm">
+            <input id="qcName" placeholder="Name (e.g. Front Door)" style="width:100%;padding:7px 10px;border:1px solid var(--glass-border-bright);border-radius:var(--radius-sm);font-size:11px;background:var(--surface-mid);color:var(--text);font-family:'Syne',sans-serif;box-sizing:border-box">
+            <input id="qcUrl" placeholder="RTSP URL or 0 for webcam" style="width:100%;padding:7px 10px;border:1px solid var(--glass-border-bright);border-radius:var(--radius-sm);font-size:11px;background:var(--surface-mid);color:var(--text);font-family:'Syne',sans-serif;box-sizing:border-box">
+            <input id="qcLoc" placeholder="Location (e.g. Living Room)" style="width:100%;padding:7px 10px;border:1px solid var(--glass-border-bright);border-radius:var(--radius-sm);font-size:11px;background:var(--surface-mid);color:var(--text);font-family:'Syne',sans-serif;box-sizing:border-box">
+            <button class="btn btn-primary" style="font-size:11px;padding:7px" onclick="quickAddCamera()">Add camera</button>
+          </div>
+        </div>
+      </div><!-- /thumb-col -->
+
+    </div><!-- /live-layout -->
+
+    <!-- Recent events — always below the feed row -->
+    <div class="live-log" style="margin-top:16px">
+      <div class="log-header">
+        <h3>Recent events</h3>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-sm" onclick="refreshEvents()">Refresh</button>
+          <button class="btn btn-sm btn-danger" onclick="clearEvents()">Clear all</button>
+        </div>
+      </div>
+      <div id="logRows"></div>
+    </div>
+  </div>
+
+  <!-- EVENTS PAGE -->
+  <div class="page" id="page-events">
+    <div class="log">
+      <div class="log-header">
+        <h3>Event history</h3>
+        <div class="log-filters">
+          <select id="filterType" onchange="loadEvents()">
+            <option value="">All types</option>
+            <option value="fall_detected">Falls</option>
+            <option value="lying_motionless">Lying motionless</option>
+            <option value="inactivity">Inactivity</option>
+            <option value="zone_entry">Zone entry</option>
+            <option value="intruder_detected">Intruder</option>
+          </select>
+          <select id="filterLimit" onchange="loadEvents()">
+            <option value="25">Last 25</option>
+            <option value="50" selected>Last 50</option>
+            <option value="100">Last 100</option>
+          </select>
+        </div>
+      </div>
+      <div id="eventRows"></div>
+    </div>
+  </div>
+
+  <!-- ZONES PAGE -->
+  <div class="page" id="page-zones">
+    <div class="settings-grid">
+      <div class="zone-canvas-wrap">
+        <h3 style="margin-bottom:10px;font-size:14px;font-weight:700">Define zones</h3>
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">Select a camera and zone type, then click points on the image to draw a polygon. <strong style="color:#f43f5e">Danger zones</strong> trigger an alert when a child enters. <strong style="color:#4ade80">Safe zones</strong> suppress lying/inactivity alerts (e.g. on a bed for sleeping).</p>
+        <div class="form-group">
+          <label>Camera</label>
+          <select id="zoneCamSelect" onchange="startZoneRefresh()" style="width:100%"></select>
+        </div>
+        <div class="form-group"><label>Zone name</label><input id="zoneName" placeholder="e.g. Kitchen stove area"></div>
+        <div class="form-group">
+          <label>Zone type</label>
+          <select id="zoneType" style="width:100%" onchange="drawZonePoints()">
+            <option value="danger">Danger — alert when child enters</option>
+            <option value="safe">Safe — no alerts for lying/inactivity here (e.g. bed)</option>
+          </select>
+        </div>
+        <div style="position:relative;width:100%;border-radius:9px;overflow:hidden;background:#060911;aspect-ratio:4/3;border:1px solid var(--glass-border)">
+          <img id="zoneImg" src="" alt="" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;">
+          <canvas id="zoneCanvas" width="640" height="480" style="position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;background:transparent"></canvas>
+        </div>
+        <div style="margin-top:11px;display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="saveZone()">Save zone</button>
+          <button class="btn" onclick="clearZonePoints()">Clear points</button>
+        </div>
+      </div>
+      <div>
+        <div class="settings-card">
+          <h3>Active zones</h3>
+          <div id="zoneList" class="zone-list"><p style="color:var(--text-dim);font-size:12px">No zones defined yet.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERSONS PAGE -->
+  <div class="page" id="page-persons">
+    <style>
+      .persons-layout{display:grid;grid-template-columns:1fr 360px;gap:18px}
+      @media (max-width:1100px){.persons-layout{grid-template-columns:1fr}}
+      .persons-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+      .person-card{
+        background:var(--surface-mid);
+        border:1px solid var(--glass-border);
+        border-radius:10px;
+        overflow:hidden;
+        transition:transform 0.12s ease, border-color 0.12s ease;
+        position:relative;
+      }
+      .person-card:hover{transform:translateY(-2px);border-color:rgba(96,165,250,0.4)}
+      .person-photo{
+        width:100%;
+        aspect-ratio:1/1;
+        object-fit:cover;
+        background:#0a0d14;
+        display:block;
+        border-bottom:1px solid var(--glass-border);
+      }
+      .person-photo-placeholder{
+        width:100%;
+        aspect-ratio:1/1;
+        background:linear-gradient(135deg,#161b26,#0a0d14);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:var(--text-dim);
+        font-size:38px;
+        font-weight:700;
+        font-family:'Space Mono',monospace;
+        border-bottom:1px solid var(--glass-border);
+      }
+      .person-body{padding:10px 12px}
+      .person-name{
+        font-weight:700;
+        font-size:13px;
+        color:var(--text);
+        margin-bottom:6px;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+      }
+      .person-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px}
+      .person-delete{
+        background:transparent;border:1px solid var(--glass-border);
+        color:var(--text-dim);padding:4px 10px;border-radius:6px;
+        font-size:10px;cursor:pointer;font-family:'Space Mono',monospace;
+        letter-spacing:0.5px;text-transform:uppercase;
+      }
+      .person-delete:hover{background:rgba(244,63,94,0.12);border-color:#f43f5e;color:#f87171}
+      .cat-pill{
+        padding:3px 8px;border-radius:4px;font-size:9px;font-weight:700;
+        letter-spacing:0.6px;font-family:'Space Mono',monospace;
+      }
+      .cat-elderly{background:rgba(251,146,60,0.18);color:#fb923c}
+      .cat-adult{background:rgba(96,165,250,0.18);color:#60a5fa}
+      .cat-child{background:rgba(74,222,128,0.18);color:#4ade80}
+      .fr-status-pill{
+        display:inline-flex;align-items:center;gap:8px;padding:6px 12px;
+        background:var(--surface-mid);border:1px solid var(--glass-border);
+        border-radius:20px;font-size:11px;font-family:'Space Mono',monospace;
+        margin-bottom:18px;
+      }
+      .fr-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+      .fr-dot.on{background:#4ade80;box-shadow:0 0 8px #4ade80}
+      .fr-dot.off{background:#f87171}
+      .persons-empty{
+        grid-column:1/-1;padding:40px 20px;text-align:center;
+        color:var(--text-dim);font-size:12px;line-height:1.8;
+      }
+      .persons-empty strong{display:block;color:var(--text);font-size:15px;margin-bottom:6px;font-weight:700}
+    </style>
+
+    <div class="persons-layout">
+      <!-- LEFT: person grid -->
+      <div>
+        <div id="faceRecStatusWrap" style="margin-bottom:6px"></div>
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:4px">Registered people</h3>
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:18px;line-height:1.6">
+          People on this list can be identified by name on the live camera feed. Anyone whose face is detected but <strong>not on this list</strong> will be flagged as an <strong style="color:#f87171">intruder</strong> — the system will trigger a WhatsApp alert and highlight them in red on the feed.
+        </p>
+        <div id="personGrid" class="persons-grid">
+          <div class="persons-empty">
+            <strong>No people registered yet</strong>
+            Use the panel on the right to register your first person.
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: registration panel -->
+      <div>
+        <div class="settings-card">
+          <h3>Register a person</h3>
+          <p style="font-size:11px;color:var(--text-dim);margin-bottom:16px;line-height:1.7">
+            Ask the person to stand in front of the selected camera, looking straight at it. Click <em>Capture</em> when they are clearly visible.
+          </p>
+          <div class="form-group"><label>Name</label><input id="newPersonName" placeholder="e.g. Grandma Siti" maxlength="40"></div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="newPersonCategory" style="width:100%">
+              <option value="elderly">Elderly</option>
+              <option value="adult" selected>Adult</option>
+              <option value="child">Child</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Capture from camera</label>
+            <select id="newPersonCamera" style="width:100%" onchange="startFacePreview()"></select>
+          </div>
+
+          <div style="margin-bottom:14px">
+            <label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:8px;letter-spacing:1px;text-transform:uppercase;font-family:'Space Mono',monospace;font-weight:700">Live preview</label>
+            <div id="facePreviewWrap" style="position:relative;width:100%;aspect-ratio:4/3;background:#060911;border:1px solid var(--glass-border);border-radius:9px;overflow:hidden">
+              <img id="facePreviewImg" src="" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
+              <canvas id="facePreviewCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+              <div id="facePreviewHint" style="position:absolute;left:10px;bottom:10px;font-size:10px;font-family:'Space Mono',monospace;padding:4px 10px;border-radius:4px;letter-spacing:0.5px;background:rgba(0,0,0,0.65);color:var(--text-dim)">SELECT A CAMERA</div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" onclick="registerPerson()" id="captureBtn" disabled style="width:100%;margin-top:4px;opacity:0.5">
+            <svg viewBox="0 0 16 16" fill="none" style="width:14px;height:14px;margin-right:6px;vertical-align:-2px"><circle cx="8" cy="8" r="3.2" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 4h2l1-1.5h5l1 1.5h2A1.5 1.5 0 0 1 15 5.5v7A1.5 1.5 0 0 1 13.5 14h-11A1.5 1.5 0 0 1 1 12.5v-7A1.5 1.5 0 0 1 2.5 4z" stroke="currentColor" stroke-width="1.3"/></svg>
+            Capture from camera
+          </button>
+          <p style="font-size:10px;color:var(--text-dim);margin-top:14px;font-family:'Space Mono',monospace;line-height:1.6">
+            A small face thumbnail is saved so you can see who is registered. The embedding used for recognition is a 512-dimensional vector, not a photo.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTRUDERS GALLERY -->
+    <div style="margin-top:28px;padding-top:22px;border-top:1px solid var(--glass-border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+        <div>
+          <h3 style="font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:10px">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f43f5e;box-shadow:0 0 8px #f43f5e"></span>
+            Intruders seen
+          </h3>
+          <p style="font-size:12px;color:var(--text-dim);line-height:1.6;max-width:640px">People detected on camera whose face did not match anyone registered. Click <strong>Register</strong> to add them as a known person, or <strong>Dismiss</strong> to remove from this list.</p>
+        </div>
+        <label style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-family:'Space Mono',monospace">
+          <input type="checkbox" id="intruderShowDismissed" onchange="loadIntruders()" style="accent-color:#60a5fa">
+          Show dismissed
+        </label>
+      </div>
+      <div id="intruderGrid" class="persons-grid">
+        <div class="persons-empty"><strong>No intruders recorded</strong>When the system sees someone it does not recognise, they will appear here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS PAGE -->
+  <div class="page" id="page-settings">
+    <div class="settings-grid">
+
+      <div class="settings-card">
+        <h3>Detection settings</h3>
+        <div class="form-group"><label>Fall confidence threshold (%)</label><input type="number" id="setThreshold" min="50" max="99" value="80"></div>
+        <div class="form-group"><label>Inactivity timeout (seconds)</label><input type="number" id="setInactivity" min="60" max="3600" value="300"></div>
+        <div class="form-group"><label>Alert cooldown (seconds)</label><input type="number" id="setCooldown" min="10" max="600" value="60"></div>
+        <button class="btn btn-primary" onclick="saveDetectionSettings()">Save settings</button>
+      </div>
+
+      <div class="settings-card">
+        <h3>Model &amp; GPU</h3>
+        <div class="form-group">
+          <label>YOLO model</label>
+          <select id="setModel">
+            <option value="yolov8n.pt">yolov8n — Nano (fastest)</option>
+            <option value="yolov8s.pt">yolov8s — Small (recommended)</option>
+            <option value="yolov8m.pt">yolov8m — Medium</option>
+            <option value="yolov8l.pt">yolov8l — Large</option>
+            <option value="yolov8x.pt">yolov8x — XLarge (most accurate)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Detection confidence (0–100%)</label><input type="number" id="setYoloConf" min="10" max="95" value="50"></div>
+        <div class="form-group">
+          <label>Input image size <small style="color:var(--text-dim)">(multiple of 32)</small></label>
+          <select id="setImgsz">
+            <option value="320">320 — fastest</option><option value="480">480</option>
+            <option value="640" selected>640 — default</option>
+            <option value="960">960</option><option value="1280">1280 — most accurate</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Processing FPS</label><input type="number" id="setFps" min="1" max="60" value="15"></div>
+        <div class="form-group">
+          <label>FP16 half-precision (GPU only)</label>
+          <select id="setFp16"><option value="true">Enabled (~2× faster)</option><option value="false">Disabled (safer fallback)</option></select>
+        </div>
+        <p style="font-size:10px;color:var(--text-dim);margin-bottom:12px;font-family:'Space Mono',monospace;line-height:1.6">⚠ Model &amp; image size changes take effect after restarting the system.</p>
+        <button class="btn btn-primary" onclick="saveModelSettings()">Save &amp; restart</button>
+      </div>
+
+      <div class="settings-card">
+        <h3>WhatsApp notifications</h3>
+        <div class="form-group">
+          <label>Phone numbers (comma-separated, with country code)</label>
+          <textarea id="setPhones" rows="3" placeholder="+60123456789, +60198765432"></textarea>
+        </div>
+        <p style="font-size:10px;color:var(--text-dim);margin-bottom:12px;font-family:'Space Mono',monospace;line-height:1.6">Configure Twilio credentials in the .env file. Numbers must be registered in your Twilio WhatsApp sandbox.</p>
+        <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+      </div>
+
+      <div class="settings-card">
+        <h3>Camera management</h3>
+        <div id="camList" class="cam-list"></div>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--glass-border)">
+          <h4 style="font-size:10px;margin-bottom:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;font-family:'Space Mono',monospace">Add camera</h4>
+          <div class="form-group"><label>Name</label><input id="newCamName" placeholder="Living Room"></div>
+          <div class="form-group"><label>RTSP URL (or 0 for webcam)</label><input id="newCamUrl" placeholder="rtsp://admin:pass@192.168.1.100:554/stream1"></div>
+          <div class="form-group"><label>Location</label><input id="newCamLoc" placeholder="Living Room"></div>
+          <button class="btn btn-primary" onclick="addCamera()">Add camera</button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <h3>About HomeShield</h3>
+        <p style="font-size:12px;color:var(--text-dim);line-height:1.9;font-family:'Space Mono',monospace">
+          HomeShield is an intelligent, machine learning-powered CCTV surveillance system designed to protect the most vulnerable members of your household — the elderly and young children.<br><br>
+          It uses YOLOv8-Pose for GPU-accelerated person detection and skeleton keypoint estimation, with a rule-based engine for fall detection and activity classification.<br><br>
+          <span style="color:var(--text)">Version:</span> 1.0<br>
+          <span style="color:var(--text)">Developer:</span> [Your Name]<br>
+          <span style="color:var(--text)">Institution:</span> IIUM KICT
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</main>
+
+<!-- Snapshot modal -->
+<div class="modal-overlay" id="snapshotModal" onclick="this.classList.remove('show')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="modalTitle">Event snapshot</h3>
+    <img id="modalImg" src="" alt="snapshot">
+    <p id="modalInfo"></p>
+  </div>
+</div>
+
+<script>
+const API = '';
+let currentPage = 'live';
+let zonePoints = [];
+let statusInterval, eventInterval;
+let selectedCamId = null;
+let cameraData = {};
+
+const pageTitles = {live:'Live feeds',events:'Event history',zones:'Zone configuration',persons:'Registered persons',settings:'System settings'};
+
+function showPage(page, btn) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('topbarTitle').textContent = pageTitles[page] || page;
+  if (page === 'events') loadEvents();
+  if (page === 'zones') { loadZoneCameras(); loadZones(); } else { stopZoneRefresh(); }
+  if (page === 'persons') { loadPersons(); loadIntruders(); populatePersonCameraSelect(); }
+  else { stopFacePreview(); }
+  if (page === 'settings') { loadSettings(); loadCameraList(); }
+}
+
+function toggleSystem() {
+  const btn = document.getElementById('toggleBtn');
+  const running = btn.textContent.includes('Stop');
+  fetch(API + '/api/system/' + (running ? 'stop' : 'start'), {method:'POST'})
+    .then(r => r.json()).then(() => pollStatus());
+}
+
+function pollStatus() {
+  fetch(API + '/api/status').then(r => r.json()).then(data => {
+    const camStr = data.cameras_online + ' / ' + data.cameras_total;
+    document.getElementById('m-cameras').textContent = camStr;
+    document.getElementById('m-alerts').textContent = data.alerts_today;
+    document.getElementById('m-people').textContent = data.people_count;
+    document.getElementById('m-status').textContent = data.running ? 'Active' : 'Stopped';
+    document.getElementById('m-status').className = 'metric-value ' + (data.running ? 'success' : 'danger');
+    document.getElementById('tb-cameras').textContent = camStr;
+    document.getElementById('tb-alerts').textContent = data.alerts_today;
+    document.getElementById('tb-people').textContent = data.people_count;
+    document.getElementById('tb-model').textContent = (data.model || '–').replace('.pt','');
+
+    const dot = document.getElementById('statusDot');
+    dot.className = 'status-dot' + (data.running ? '' : ' off');
+    document.getElementById('statusText').textContent = data.running ? 'Running' : 'Stopped';
+    document.getElementById('toggleBtn').textContent = data.running ? 'Stop system' : 'Start system';
+    document.getElementById('toggleBtn').className = 'btn btn-full ' + (data.running ? 'btn-danger' : 'btn-primary');
+
+    cameraData = data.cameras;
+    updateFeedsHero(data.cameras);
+  }).catch(() => {});
+}
+
+function updateFeedsHero(cameras) {
+  const ids = Object.keys(cameras);
+  const panel = document.getElementById('thumbPanel');
+  const heroScreen = document.getElementById('heroScreen');
+
+  if (ids.length === 0) {
+    panel.innerHTML = '';
+    heroScreen.innerHTML = '<span style="color:var(--text-dim);font-size:12px;font-family:\'Space Mono\',monospace">No cameras configured</span>';
+    return;
+  }
+
+  if (!selectedCamId || !cameras[selectedCamId]) selectedCamId = ids[0];
+
+  const hero = cameras[selectedCamId];
+  // Update hero screen
+  const dotClass = hero.active ? 'live-dot' : 'live-dot offline';
+  const pillStyle = hero.active ? '' : 'opacity:0.55';
+  const pillLabel = hero.active ? 'LIVE' : 'OFFLINE';
+  let overlayHTML = `<div class="hero-overlay"><div class="live-pill" style="${pillStyle}"><div class="${dotClass}"></div><span>${pillLabel}</span></div></div>`;
+  if (hero.active) {
+    heroScreen.innerHTML = overlayHTML + `<img src="/video_feed/${selectedCamId}" alt="${hero.name}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display='none'">`;
+  } else {
+    heroScreen.innerHTML = overlayHTML + `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px"><svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M3 3l18 18M10.5 6.5A4 4 0 0116 12m-1.5 3.5A4 4 0 018 12M2 2l20 20" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-linecap="round"/><rect x="2" y="5" width="20" height="14" rx="2" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/></svg><span style="color:var(--text-dim);font-size:11px;font-family:'Space Mono',monospace;letter-spacing:1px">CAMERA OFFLINE</span></div>`;
+  };
+  document.getElementById('heroCamName').textContent = hero.name;
+  document.getElementById('heroCamLoc').textContent = hero.location || '–';
+  const hb = document.getElementById('heroBadge');
+  hb.className = 'feed-badge ' + (hero.active ? 'live' : 'alert');
+  hb.textContent = hero.active ? 'LIVE' : 'OFFLINE';
+
+  if (panel.children.length !== ids.length) {
+    panel.innerHTML = '';
+    ids.forEach(cid => {
+      const cam = cameras[cid];
+      const card = document.createElement('div');
+      card.className = 'thumb-card' + (cid === selectedCamId ? ' selected' : '') + (!cam.active ? ' alert-cam' : '');
+      card.id = 'thumb-' + cid;
+      card.onclick = () => selectHero(cid);
+      card.innerHTML = `
+        <div class="thumb-screen">
+          <img src="/video_feed/${cid}" alt="${cam.name}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.outerHTML='<div class=thumb-offline>Offline</div>'">
+        </div>
+        <div class="thumb-bar">
+          <span class="thumb-name">${cam.name}</span>
+          <span class="feed-badge ${cam.active ? 'live' : 'alert'}" id="tbadge-${cid}">${cam.active ? 'LIVE' : 'OFF'}</span>
+        </div>`;
+      panel.appendChild(card);
+    });
+  } else {
+    ids.forEach(cid => {
+      const card = document.getElementById('thumb-' + cid);
+      if (!card) return;
+      card.className = 'thumb-card' + (cid === selectedCamId ? ' selected' : '') + (!cameras[cid].active ? ' alert-cam' : '');
+      const badge = document.getElementById('tbadge-' + cid);
+      if (badge) { badge.className = 'feed-badge ' + (cameras[cid].active ? 'live' : 'alert'); badge.textContent = cameras[cid].active ? 'LIVE' : 'OFF'; }
+    });
+  }
+}
+
+function selectHero(cid) {
+  selectedCamId = cid;
+  updateFeedsHero(cameraData);
+}
+
+function refreshEvents() { loadRecentEvents(); }
+
+function loadRecentEvents() {
+  fetch(API + '/api/events?limit=10').then(r => r.json()).then(events => {
+    document.getElementById('logRows').innerHTML = events.map(e => eventRow(e)).join('');
+  });
+}
+
+function loadEvents() {
+  const type = document.getElementById('filterType').value;
+  const limit = document.getElementById('filterLimit').value;
+  let url = API + '/api/events?limit=' + limit;
+  if (type) url += '&type=' + type;
+  fetch(url).then(r => r.json()).then(events => {
+    document.getElementById('eventRows').innerHTML = events.map(e => eventRow(e)).join('');
+  });
+}
+
+function eventRow(e) {
+  const badges = {fall_detected:['badge-danger','Fall detected'],lying_motionless:['badge-danger','Lying motionless'],inactivity:['badge-warning','Inactivity'],zone_entry:['badge-warning','Child in danger zone'],intruder_detected:['badge-danger','Intruder detected'],normal:['badge-success','Normal']};
+  const [cls, label] = badges[e.event_type] || ['badge-info', e.event_type];
+  const time = e.created_at ? new Date(e.created_at).toLocaleString() : '';
+  const snap = e.snapshot_path ? `<img class="log-snap" src="/${e.snapshot_path}" onclick="showSnapshot('${e.snapshot_path}','${label}','${time}')">` : '';
+  return `<div class="log-row">
+    <span class="badge ${cls}">${label}</span>
+    <span class="log-desc">${e.person_category} — ${e.camera_name||'Unknown'} ${e.details?'('+e.details+')':''}</span>
+    <span class="log-conf">${(e.confidence*100).toFixed(0)}%</span>
+    <span class="log-time">${time}</span>
+    ${snap}
+  </div>`;
+}
+
+function showSnapshot(path, title, time) {
+  document.getElementById('modalImg').src = '/' + path;
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalInfo').textContent = time;
+  document.getElementById('snapshotModal').classList.add('show');
+}
+
+function loadZoneCameras() {
+  fetch(API + '/api/cameras').then(r => r.json()).then(cams => {
+    const sel = document.getElementById('zoneCamSelect');
+    sel.innerHTML = cams.map(c => `<option value="${c.camera_id}">${c.name} — ${c.location}</option>`).join('');
+    startZoneRefresh();
+  });
+}
+
+function loadZoneFrame() {
+  const cid = document.getElementById('zoneCamSelect').value;
+  if (!cid) return;
+  document.getElementById('zoneImg').src = '/frame_snap/' + cid + '?t=' + Date.now();
+}
+
+let zoneRefreshTimer = null;
+function startZoneRefresh() { stopZoneRefresh(); loadZoneFrame(); zoneRefreshTimer = setInterval(loadZoneFrame, 2000); }
+function stopZoneRefresh() { if (zoneRefreshTimer) { clearInterval(zoneRefreshTimer); zoneRefreshTimer = null; } }
+
+document.getElementById('zoneCanvas').addEventListener('click', function(e) {
+  const rect = this.getBoundingClientRect();
+  zonePoints.push([Math.round((e.clientX-rect.left)*640/rect.width), Math.round((e.clientY-rect.top)*480/rect.height)]);
+  drawZonePoints();
+});
+
+function drawZonePoints() {
+  const canvas = document.getElementById('zoneCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,640,480);
+  const zt = document.getElementById('zoneType');
+  const isSafe = zt && zt.value === 'safe';
+  const strokeColor = isSafe ? '#4ade80' : '#f43f5e';
+  const fillColor   = isSafe ? 'rgba(74,222,128,0.14)' : 'rgba(244,63,94,0.14)';
+  if (zonePoints.length > 0) {
+    ctx.beginPath(); ctx.moveTo(zonePoints[0][0],zonePoints[0][1]);
+    zonePoints.forEach(p => ctx.lineTo(p[0],p[1]));
+    ctx.closePath(); ctx.strokeStyle=strokeColor; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle=fillColor; ctx.fill();
+    zonePoints.forEach(p => { ctx.beginPath(); ctx.arc(p[0],p[1],5,0,Math.PI*2); ctx.fillStyle=strokeColor; ctx.fill(); });
+  }
+}
+function clearZonePoints() { zonePoints=[]; drawZonePoints(); }
+
+function saveZone() {
+  if (zonePoints.length < 3) return alert('Draw at least 3 points');
+  const zoneType = document.getElementById('zoneType').value;
+  const defaultName = zoneType === 'safe' ? 'Safe Zone' : 'Danger Zone';
+  const data = {
+    zone_name: document.getElementById('zoneName').value || defaultName,
+    camera_id: parseInt(document.getElementById('zoneCamSelect').value),
+    polygon:   zonePoints,
+    zone_type: zoneType,
+  };
+  fetch(API+'/api/zones',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+    .then(r=>r.json()).then(()=>{clearZonePoints();loadZones();alert('Zone saved!');});
+}
+
+function loadZones() {
+  fetch(API+'/api/zones').then(r=>r.json()).then(zones=>{
+    const c=document.getElementById('zoneList');
+    if (!zones.length){c.innerHTML='<p style="color:var(--text-dim);font-size:12px">No zones defined yet.</p>';return;}
+    c.innerHTML=zones.map(z=>{
+      const isSafe = z.zone_type === 'safe';
+      const badge = isSafe
+        ? '<span style="background:rgba(74,222,128,0.18);color:#4ade80;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;letter-spacing:0.5px;font-family:Space Mono,monospace;margin-right:6px">SAFE</span>'
+        : '<span style="background:rgba(244,63,94,0.18);color:#f87171;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;letter-spacing:0.5px;font-family:Space Mono,monospace;margin-right:6px">DANGER</span>';
+      return `<div class="zone-item"><span>${badge}<strong>${z.zone_name}</strong> — Camera ${z.camera_id} (${z.polygon.length} pts)</span><button class="btn btn-sm" onclick="deleteZone(${z.zone_id})">Delete</button></div>`;
+    }).join('');
+  });
+}
+function deleteZone(id) { fetch(API+'/api/zones/'+id,{method:'DELETE'}).then(()=>loadZones()); }
+
+// ── Persons (face registry) ─────────────────────────────────
+function loadPersons() {
+  fetch(API+'/api/persons').then(r=>r.json()).then(d=>{
+    const enabled = d.face_rec_enabled;
+    const wrap = document.getElementById('faceRecStatusWrap');
+    if (wrap) {
+      wrap.innerHTML = enabled
+        ? '<span class="fr-status-pill"><span class="fr-dot on"></span>Face recognition active</span>'
+        : '<span class="fr-status-pill"><span class="fr-dot off"></span>Face recognition disabled — install <code style="color:var(--text);font-family:Space Mono,monospace">insightface</code> and <code style="color:var(--text);font-family:Space Mono,monospace">onnxruntime-gpu</code></span>';
+    }
+    const grid = document.getElementById('personGrid');
+    const persons = d.persons || [];
+    if (!persons.length) {
+      grid.innerHTML = '<div class="persons-empty"><strong>No people registered yet</strong>Use the panel on the right to register your first person.</div>';
+      return;
+    }
+    grid.innerHTML = persons.map(p => {
+      const initial = (p.name || '?').trim().charAt(0).toUpperCase();
+      // Append timestamp to bust cache after re-registering the same id
+      const imgSrc = p.photo_url
+        ? `${p.photo_url}?t=${Date.now()}`
+        : '';
+      const photoEl = imgSrc
+        ? `<img class="person-photo" src="${imgSrc}" alt="${escapeHtml(p.name)}" onerror="this.outerHTML='<div class=&quot;person-photo-placeholder&quot;>${initial}</div>'">`
+        : `<div class="person-photo-placeholder">${initial}</div>`;
+      const catClass = {elderly:'cat-elderly', adult:'cat-adult', child:'cat-child'}[p.category] || 'cat-adult';
+      return `
+        <div class="person-card">
+          ${photoEl}
+          <div class="person-body">
+            <div class="person-name">${escapeHtml(p.name)}</div>
+            <div class="person-actions">
+              <span class="cat-pill ${catClass}">${p.category.toUpperCase()}</span>
+              <button class="person-delete" onclick="deletePerson(${p.person_id}, '${escapeHtml(p.name).replace(/'/g,"\\'")}')">Remove</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  });
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function registerPerson() {
+  const nameEl = document.getElementById('newPersonName');
+  const name   = nameEl.value.trim();
+  const category = document.getElementById('newPersonCategory').value;
+  const camSel   = document.getElementById('newPersonCamera');
+  const camId    = camSel && camSel.value ? parseInt(camSel.value) : null;
+  if (!name)  { nameEl.focus(); return alert('Enter a name'); }
+  if (!camId) return alert('Select a camera');
+
+  const btn = document.getElementById('captureBtn');
+  const prev = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = 'Capturing…';
+
+  fetch(API+'/api/persons', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name, category, camera_id: camId}),
+  }).then(r => r.json().then(body => ({ok: r.ok, body})))
+    .then(({ok, body}) => {
+      btn.disabled = false; btn.innerHTML = prev;
+      if (!ok || body.error) { alert(body.error || 'Registration failed'); return; }
+      nameEl.value = '';
+      const ageStr = body.detected_age != null ? ` (detected age ≈ ${body.detected_age})` : '';
+      loadPersons();
+      // Small toast-ish feedback
+      showToast(`Registered ${body.name}${ageStr}`);
+    }).catch(err => {
+      btn.disabled = false; btn.innerHTML = prev;
+      alert('Registration failed: ' + err);
+    });
+}
+
+function deletePerson(id, name) {
+  if (!confirm(`Remove ${name} from the registry? They will be flagged as an intruder on next detection.`)) return;
+  fetch(API+'/api/persons/'+id, {method:'DELETE'}).then(()=>loadPersons());
+}
+
+function populatePersonCameraSelect() {
+  fetch(API+'/api/cameras').then(r=>r.json()).then(cams=>{
+    const sel = document.getElementById('newPersonCamera');
+    if (!sel) return;
+    if (!cams.length) {
+      sel.innerHTML = '<option value="">No cameras configured</option>';
+      stopFacePreview();
+      return;
+    }
+    sel.innerHTML = cams.map(c => `<option value="${c.camera_id}">${escapeHtml(c.name)}${c.location ? ' — ' + escapeHtml(c.location) : ''}</option>`).join('');
+    // Kick off the preview against the first camera
+    startFacePreview();
+  });
+}
+
+// ── Live face-detection preview ─────────────────────────────
+let _facePreviewTimer = null;
+let _faceDetectTimer  = null;
+let _lastFaceDetect   = null;
+
+function startFacePreview() {
+  stopFacePreview();
+  const sel = document.getElementById('newPersonCamera');
+  if (!sel || !sel.value) return;
+  const camId = parseInt(sel.value);
+
+  // MJPEG isn't great here because we also need a canvas overlay synced to
+  // frame dims — so we poll frame_snap every ~200ms.
+  const img = document.getElementById('facePreviewImg');
+  const hint = document.getElementById('facePreviewHint');
+  const refreshFrame = () => {
+    img.src = `${API}/frame_snap/${camId}?t=${Date.now()}`;
+  };
+  refreshFrame();
+  _facePreviewTimer = setInterval(refreshFrame, 200);
+
+  // Detect a face every 600ms — cheaper than the frame refresh
+  const runDetect = () => {
+    fetch(`${API}/api/detect_face/${camId}`).then(r=>r.json()).then(d=>{
+      _lastFaceDetect = d;
+      drawFacePreviewOverlay(d);
+      updateFaceHint(d);
+    }).catch(() => { /* ignore transient errors */ });
+  };
+  runDetect();
+  _faceDetectTimer = setInterval(runDetect, 600);
+  hint.textContent = 'LOOKING FOR A FACE…';
+  hint.style.color = 'var(--text-dim)';
+}
+
+function stopFacePreview() {
+  if (_facePreviewTimer) clearInterval(_facePreviewTimer);
+  if (_faceDetectTimer)  clearInterval(_faceDetectTimer);
+  _facePreviewTimer = _faceDetectTimer = null;
+  _lastFaceDetect = null;
+  setCaptureEnabled(false);
+  const canvas = document.getElementById('facePreviewCanvas');
+  if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawFacePreviewOverlay(d) {
+  const wrap   = document.getElementById('facePreviewWrap');
+  const canvas = document.getElementById('facePreviewCanvas');
+  if (!wrap || !canvas) return;
+  const dispW = wrap.clientWidth, dispH = wrap.clientHeight;
+  if (canvas.width !== dispW || canvas.height !== dispH) {
+    canvas.width = dispW; canvas.height = dispH;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!d || !d.face || !d.width || !d.height) return;
+
+  const f = d.face;
+  // The image uses object-fit:cover, so we need to replicate cover math.
+  const scale = Math.max(dispW / d.width, dispH / d.height);
+  const offX  = (dispW - d.width * scale) / 2;
+  const offY  = (dispH - d.height * scale) / 2;
+  const x = f.x * scale + offX;
+  const y = f.y * scale + offY;
+  const w = f.w * scale;
+  const h = f.h * scale;
+
+  // Green guide box with subtle glow
+  ctx.save();
+  ctx.shadowColor = 'rgba(74,222,128,0.7)';
+  ctx.shadowBlur  = 8;
+  ctx.strokeStyle = '#4ade80';
+  ctx.lineWidth   = 2.5;
+  ctx.strokeRect(x, y, w, h);
+  ctx.restore();
+
+  // Corner brackets for the "ready to capture" look
+  const cl = Math.min(18, w * 0.22);
+  ctx.strokeStyle = '#4ade80';
+  ctx.lineWidth   = 3;
+  ctx.beginPath();
+  [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(([cx, cy], i) => {
+    const sx = i % 2 === 0 ? 1 : -1;
+    const sy = i < 2 ? 1 : -1;
+    ctx.moveTo(cx, cy + cl * sy); ctx.lineTo(cx, cy); ctx.lineTo(cx + cl * sx, cy);
+  });
+  ctx.stroke();
+}
+
+function updateFaceHint(d) {
+  const hint = document.getElementById('facePreviewHint');
+  if (!hint) return;
+
+  if (!d || d.error === 'no_frame') {
+    hint.textContent = 'CAMERA OFFLINE';
+    hint.style.color = '#f87171';
+    setCaptureEnabled(false);
+    return;
+  }
+  if (d.error === 'face_rec_disabled') {
+    hint.textContent = 'FACE RECOGNITION DISABLED';
+    hint.style.color = '#f87171';
+    setCaptureEnabled(false);
+    return;
+  }
+  if (!d.face) {
+    hint.textContent = 'NO FACE — LOOK AT THE CAMERA';
+    hint.style.color = '#fb923c';
+    setCaptureEnabled(false);
+    return;
+  }
+  // Face detected: check size — very small faces are unreliable for embedding
+  const frac = d.face.h / d.height;
+  if (frac < 0.10) {
+    hint.textContent = 'MOVE CLOSER';
+    hint.style.color = '#fb923c';
+    setCaptureEnabled(false);
+    return;
+  }
+  hint.textContent = d.face.age != null
+    ? `FACE OK • ~${d.face.age}y`
+    : 'FACE OK';
+  hint.style.color = '#4ade80';
+  setCaptureEnabled(true);
+}
+
+function setCaptureEnabled(yes) {
+  const btn = document.getElementById('captureBtn');
+  if (!btn) return;
+  btn.disabled = !yes;
+  btn.style.opacity = yes ? '1' : '0.5';
+  btn.style.cursor  = yes ? 'pointer' : 'not-allowed';
+}
+
+// ── Intruders gallery ───────────────────────────────────────
+function loadIntruders() {
+  const showDismissed = document.getElementById('intruderShowDismissed')?.checked;
+  const url = API + '/api/intruders' + (showDismissed ? '?include_dismissed=1' : '');
+  fetch(url).then(r=>r.json()).then(list => {
+    const grid = document.getElementById('intruderGrid');
+    if (!list.length) {
+      grid.innerHTML = '<div class="persons-empty"><strong>No intruders recorded</strong>When the system sees someone it does not recognise, they will appear here.</div>';
+      return;
+    }
+    grid.innerHTML = list.map(intr => {
+      const when = formatRelativeTime(intr.detected_at);
+      const dismissedLabel = intr.dismissed
+        ? '<div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.65);color:var(--text-dim);padding:2px 7px;border-radius:4px;font-size:9px;letter-spacing:0.5px;font-family:Space Mono,monospace">DISMISSED</div>'
+        : '';
+      return `
+        <div class="person-card" style="border-color:${intr.dismissed ? 'var(--glass-border)' : 'rgba(244,63,94,0.35)'}">
+          ${dismissedLabel}
+          <img class="person-photo" src="${intr.photo_url}?t=${Date.now()}"
+               onerror="this.outerHTML='<div class=&quot;person-photo-placeholder&quot; style=&quot;color:#f87171&quot;>?</div>'">
+          <div class="person-body">
+            <div class="person-name" style="color:${intr.dismissed ? 'var(--text-dim)' : '#f87171'}">Unknown</div>
+            <div style="font-size:10px;color:var(--text-dim);font-family:Space Mono,monospace;margin-bottom:8px">
+              ${escapeHtml(intr.camera_name)} • ${when}
+            </div>
+            <div class="person-actions" style="flex-wrap:wrap;gap:6px">
+              <button class="btn btn-sm btn-primary" style="font-size:10px;padding:5px 10px" onclick="promptRegisterIntruder(${intr.intruder_id})">Register</button>
+              ${intr.dismissed
+                ? `<button class="person-delete" onclick="deleteIntruder(${intr.intruder_id})">Delete</button>`
+                : `<button class="person-delete" onclick="dismissIntruder(${intr.intruder_id})">Dismiss</button>`
+              }
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  });
+}
+
+function dismissIntruder(id) {
+  fetch(API + '/api/intruders/' + id + '/dismiss', {method: 'POST'}).then(() => loadIntruders());
+}
+function deleteIntruder(id) {
+  if (!confirm('Permanently delete this intruder record?')) return;
+  fetch(API + '/api/intruders/' + id, {method: 'DELETE'}).then(() => loadIntruders());
+}
+
+function promptRegisterIntruder(id) {
+  const name = prompt('Name for this person:');
+  if (!name || !name.trim()) return;
+  const categoryInput = prompt('Category? Type: child, adult, or elderly', 'adult');
+  const category = (categoryInput || 'adult').trim().toLowerCase();
+  const validCat = ['child','adult','elderly'].includes(category) ? category : 'adult';
+
+  fetch(API + '/api/intruders/' + id + '/register', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name: name.trim(), category: validCat}),
+  }).then(r => r.json().then(b => ({ok: r.ok, body: b})))
+    .then(({ok, body}) => {
+      if (!ok || body.error) return alert(body.error || 'Registration failed');
+      loadPersons();
+      loadIntruders();
+      showToast(`${body.name} moved to registered persons`);
+    });
+}
+
+function formatRelativeTime(ts) {
+  if (!ts) return '';
+  // SQLite CURRENT_TIMESTAMP is UTC; parse and compare to local now
+  const d = new Date(ts.replace(' ', 'T') + 'Z');
+  const secs = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000));
+  if (secs < 60)   return secs + 's ago';
+  if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
+  if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
+  return Math.floor(secs / 86400) + 'd ago';
+}
+
+// Simple bottom-right toast for nicer feedback than native alert()
+function showToast(msg) {
+  let el = document.getElementById('hs-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'hs-toast';
+    el.style.cssText = 'position:fixed;bottom:22px;right:22px;background:#0f1623;border:1px solid rgba(74,222,128,0.4);color:#4ade80;padding:12px 18px;border-radius:8px;font-size:12px;font-family:Inter,sans-serif;z-index:9999;box-shadow:0 10px 30px rgba(0,0,0,0.4);opacity:0;transform:translateY(10px);transition:opacity 0.2s, transform 0.2s';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(10px)'; }, 3000);
+}
+
+function loadSettings() {
+  fetch(API+'/api/settings').then(r=>r.json()).then(s=>{
+    document.getElementById('setThreshold').value=Math.round(s.fall_threshold*100);
+    document.getElementById('setInactivity').value=s.inactivity_seconds;
+    document.getElementById('setCooldown').value=s.alert_cooldown;
+    document.getElementById('setPhones').value=s.alert_phones||'';
+    const modelSel=document.getElementById('setModel');
+    if(modelSel)[...modelSel.options].forEach(o=>o.selected=o.value===s.yolo_model);
+    if(document.getElementById('setYoloConf'))document.getElementById('setYoloConf').value=Math.round((s.yolo_confidence||0.5)*100);
+    const imgszSel=document.getElementById('setImgsz');
+    if(imgszSel)[...imgszSel.options].forEach(o=>o.selected=parseInt(o.value)===parseInt(s.yolo_imgsz||640));
+    if(document.getElementById('setFps'))document.getElementById('setFps').value=s.process_fps||15;
+    const fp16Sel=document.getElementById('setFp16');
+    if(fp16Sel)[...fp16Sel.options].forEach(o=>o.selected=o.value===String(s.use_fp16!==false));
+  });
+}
+
+function saveDetectionSettings() {
+  const data={fall_threshold:parseInt(document.getElementById('setThreshold').value)/100,inactivity_seconds:parseInt(document.getElementById('setInactivity').value),alert_cooldown:parseInt(document.getElementById('setCooldown').value),alert_phones:document.getElementById('setPhones').value};
+  fetch(API+'/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()).then(()=>alert('Detection settings saved!'));
+}
+
+function saveModelSettings() {
+  const data={yolo_model:document.getElementById('setModel').value,yolo_confidence:parseInt(document.getElementById('setYoloConf').value)/100,yolo_imgsz:parseInt(document.getElementById('setImgsz').value),process_fps:parseInt(document.getElementById('setFps').value),use_fp16:document.getElementById('setFp16').value==='true',alert_phones:document.getElementById('setPhones').value};
+  fetch(API+'/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()).then(()=>{
+    alert('Model settings saved! Restarting system…');
+    fetch(API+'/api/system/stop',{method:'POST'}).then(()=>setTimeout(()=>fetch(API+'/api/system/start',{method:'POST'}),1500));
+  });
+}
+
+function saveSettings() { saveDetectionSettings(); }
+
+function loadCameraList() {
+  fetch(API+'/api/cameras').then(r=>r.json()).then(cams=>{
+    document.getElementById('camList').innerHTML=cams.map(c=>`<div class="cam-item"><div class="cam-info"><strong>${c.name}</strong><small>${c.url} — ${c.location}</small></div><button class="btn btn-danger btn-sm" onclick="deleteCamera(${c.camera_id})">Remove</button></div>`).join('')||'<p style="color:var(--text-dim);font-size:12px">No cameras configured.</p>';
+  });
+}
+
+function addCamera() {
+  const data={name:document.getElementById('newCamName').value||'Camera',url:document.getElementById('newCamUrl').value||'0',location:document.getElementById('newCamLoc').value||''};
+  fetch(API+'/api/cameras',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()).then(()=>{
+    loadCameraList();
+    ['newCamName','newCamUrl','newCamLoc'].forEach(id=>document.getElementById(id).value='');
+  });
+}
+
+function quickAddCamera() {
+  const name = document.getElementById('qcName').value.trim() || 'Camera';
+  const url  = document.getElementById('qcUrl').value.trim() || '0';
+  const loc  = document.getElementById('qcLoc').value.trim() || '';
+  fetch(API+'/api/cameras',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,url,location:loc})
+  }).then(r=>r.json()).then(()=>{
+    ['qcName','qcUrl','qcLoc'].forEach(id=>document.getElementById(id).value='');
+    // Also refresh the Settings camera list if it's open
+    if(document.getElementById('page-settings').style.display!=='none') loadCameraList();
+  }).catch(()=>alert('Failed to add camera'));
+}
+
+function deleteCamera(id) {
+  if(!confirm('Remove this camera?'))return;
+  fetch(API+'/api/cameras/'+id,{method:'DELETE'}).then(()=>loadCameraList());
+}
+
+function clearEvents() {
+  if (!confirm('Clear all events from the log? This cannot be undone.')) return;
+  fetch(API + '/api/events/clear', {method:'POST'}).then(r => r.json()).then(d => {
+    if (d.error) { alert('Not authorised — please log in first'); return; }
+    document.getElementById('logRows').innerHTML = '<p style="color:var(--text-dim);font-size:12px;padding:16px 20px">No events yet.</p>';
+    document.getElementById('m-alerts').textContent = '0';
+    document.getElementById('tb-alerts').textContent = '0';
+  });
+}
+
+function clearAllEvents() { clearEvents(); }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+pollStatus();
+loadRecentEvents();
+statusInterval = setInterval(pollStatus, 3000);
+eventInterval = setInterval(loadRecentEvents, 10000);
+
+// ── Live layout resizer ───────────────────────────────────────────────────────
+(function() {
+  const STORAGE_KEY = 'hs_thumb_width';
+  const MIN_THUMB = 160, MAX_THUMB = 600, DEFAULT_THUMB = 290;
+
+  function initResizer() {
+    const divider  = document.getElementById('liveDivider');
+    const thumbCol = document.getElementById('thumbCol');
+    if (!divider || !thumbCol) return;
+
+    // Restore saved width
+    const saved = parseInt(localStorage.getItem(STORAGE_KEY));
+    if (saved >= MIN_THUMB && saved <= MAX_THUMB) thumbCol.style.width = saved + 'px';
+
+    let dragging = false, startX = 0, startW = 0;
+
+    divider.addEventListener('mousedown', e => {
+      dragging = true; startX = e.clientX; startW = thumbCol.offsetWidth;
+      divider.classList.add('dragging');
+      document.body.style.cssText += ';cursor:col-resize!important;user-select:none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const newW = Math.min(MAX_THUMB, Math.max(MIN_THUMB, startW + (startX - e.clientX)));
+      thumbCol.style.width = newW + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      divider.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      localStorage.setItem(STORAGE_KEY, thumbCol.offsetWidth);
+    });
+
+    // Double-click = reset to default width
+    divider.addEventListener('dblclick', () => {
+      thumbCol.style.width = DEFAULT_THUMB + 'px';
+      localStorage.setItem(STORAGE_KEY, DEFAULT_THUMB);
+    });
+
+    // Touch support
+    divider.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX; startW = thumbCol.offsetWidth; dragging = true;
+    }, {passive:true});
+    document.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      const newW = Math.min(MAX_THUMB, Math.max(MIN_THUMB, startW + (startX - e.touches[0].clientX)));
+      thumbCol.style.width = newW + 'px';
+    }, {passive:true});
+    document.addEventListener('touchend', () => {
+      if (dragging) { dragging = false; localStorage.setItem(STORAGE_KEY, thumbCol.offsetWidth); }
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initResizer);
+  else initResizer();
+})();
+</script>
+
+
+</body>
+</html>

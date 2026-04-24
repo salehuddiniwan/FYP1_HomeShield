@@ -1,0 +1,73 @@
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ HomeShield — pinned dependencies for Python 3.11 on Windows / Linux.    │
+# │                                                                         │
+# │ These exact versions are the tested-known-working combination.  Do not  │
+# │ `pip install --upgrade` without testing — InsightFace has a brittle     │
+# │ NumPy 1.x dependency, and PyTorch + OpenCV must stay on NumPy 1.x too.  │
+# │                                                                         │
+# │ Python 3.11 is required.  InsightFace does NOT publish wheels for 3.12, │
+# │ and compiling from source needs the MSVC compiler on Windows.           │
+# └─────────────────────────────────────────────────────────────────────────┘
+
+# ── Core web framework ────────────────────────────────────────────────────────
+flask==3.0.3
+python-dotenv==1.0.1
+twilio==9.3.7
+
+# ── Numeric / computer-vision baseline ────────────────────────────────────────
+# numpy is PINNED to 1.26.x — InsightFace's compiled Cython extension was built
+# against the NumPy 1.x ABI and crashes with NumPy 2.x ("numpy.dtype size
+# changed, may indicate binary incompatibility").
+numpy==1.26.4
+
+# OpenCV 4.10 is the last major release that works with both NumPy 1 and 2.
+# Newer versions (4.11+) require NumPy 2, which breaks InsightFace.
+opencv-python==4.10.0.84
+
+# ── PyTorch (install SEPARATELY from its own index) ───────────────────────────
+# Do NOT `pip install torch` without --index-url — you'll get the CPU build.
+# Run ONE of these BEFORE `pip install -r requirements.txt`:
+#
+#   NVIDIA CUDA 12.1 (RTX 30/40 series — recommended):
+#     pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
+#
+#   NVIDIA CUDA 11.8 (GTX 10/16/20 series):
+#     pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu118
+#
+#   Apple Silicon (MPS, no CUDA flag needed):
+#     pip install torch==2.5.1 torchvision==0.20.1
+#
+#   CPU-only fallback:
+#     pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
+#
+# These placeholder lines exist so pip succeeds if torch is already installed.
+# Comment them out if they cause conflicts with a manually installed build.
+torch==2.5.1
+torchvision==0.20.1
+
+# ── Person detection + pose (YOLOv8) ──────────────────────────────────────────
+# Ultralytics 8.3.x works with PyTorch 2.5.x and downloads yolov8*-pose weights
+# automatically on first run.
+ultralytics==8.3.39
+
+# ── Face recognition (InsightFace) ────────────────────────────────────────────
+# Optional — remove these two lines to disable face recognition + intruder
+# detection (the rest of the system still works).
+#
+# WINDOWS: PyPI ships no prebuilt wheel for this package.  Either install the
+# Microsoft C++ Build Tools (visualstudio.microsoft.com/visual-cpp-build-tools/)
+# OR grab the community prebuilt wheel for Python 3.11:
+#
+#   https://github.com/Gourieff/Assets/tree/main/Insightface
+#
+# Download insightface-0.7.3-cp311-cp311-win_amd64.whl, then:
+#   pip install C:\path\to\insightface-0.7.3-cp311-cp311-win_amd64.whl
+#
+# On Linux/Mac, pip install works directly.
+insightface==0.7.3
+
+# ONNX runtime for InsightFace inference.
+#   GPU (CUDA 12):   onnxruntime-gpu==1.20.1
+#   GPU (CUDA 11.8): onnxruntime-gpu==1.17.1
+#   CPU-only:        onnxruntime==1.20.1  (remove the -gpu line)
+onnxruntime-gpu==1.20.1

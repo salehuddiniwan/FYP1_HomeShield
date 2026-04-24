@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment variables (contains secrets!)
+.env
+
+# Database — contains face embeddings and registered person data
+*.db
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.db-journal
+
+# YOLOv8 model weights (too large for GitHub — up to 136MB each)
+*.pt
+*.onnx
+*.engine
+
+# Models folder
+models/
+
+# Snapshots — event photos, face thumbnails, intruder captures (PRIVACY)
+snapshots/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
