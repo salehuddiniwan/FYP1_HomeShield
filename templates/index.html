@@ -132,7 +132,7 @@ body::after{
   backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
   border-bottom:1px solid var(--glass-border);
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 30px;z-index:100;
+  padding:0 30px;z-index:100;gap:12px;
 }
 .topbar-title{font-size:18px;font-weight:800;letter-spacing:-0.3px}
 .topbar-stats{display:flex;align-items:center;gap:0}
@@ -143,6 +143,29 @@ body::after{
 .topbar-stat:not(:last-child){border-right:1px solid var(--glass-border)}
 .topbar-stat .ts-label{font-size:9px;color:var(--text-dim);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:1px}
 .topbar-stat .ts-val{font-size:16px;font-weight:800;letter-spacing:-0.5px}
+
+/* Hamburger button — hidden on desktop, shown on mobile */
+.burger-btn{
+  display:none;
+  background:transparent;border:1px solid var(--glass-border);
+  color:var(--text);padding:8px 10px;border-radius:8px;
+  cursor:pointer;align-items:center;justify-content:center;
+  transition:background 0.15s, border-color 0.15s;
+  flex-shrink:0;
+}
+.burger-btn:hover{background:var(--surface-mid);border-color:rgba(59,130,246,0.5)}
+.burger-btn:active{transform:scale(0.95)}
+
+/* Backdrop behind the sidebar on mobile — tap to close */
+.sidebar-backdrop{
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.55);
+  backdrop-filter:blur(2px);
+  z-index:199;
+  opacity:0;transition:opacity 0.2s;
+}
+.sidebar-backdrop.show{display:block;opacity:1}
 
 /* ══ MAIN ══ */
 .main{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);min-height:100vh;position:relative;z-index:1}
@@ -390,16 +413,40 @@ select{
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.16)}
 
 @media(max-width:900px){
-  .sidebar{width:220px;transform:translateX(-220px);transition:transform .25s}
+  .sidebar{
+    width:260px;
+    transform:translateX(-260px);
+    transition:transform .25s ease;
+    z-index:200;
+    box-shadow:4px 0 24px rgba(0,0,0,0.5);
+  }
   .sidebar.open{transform:translateX(0)}
   .topbar,.main{left:0;margin-left:0}
+  .topbar{padding:0 14px;gap:10px}
+  .burger-btn{display:inline-flex}
+  .topbar-title{font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar-stats{gap:0}
+  .topbar-stat{padding:0 10px}
+  .topbar-stat .ts-val{font-size:14px}
+  .topbar-stat .ts-label{font-size:8px}
+  .content{padding:14px 12px}
   .metrics{grid-template-columns:repeat(2,1fr)}
   .live-layout{flex-direction:column}
   .live-divider{display:none}
   .hero-col,.thumb-col{width:100%!important;min-width:0}
-  .thumb-col{flex-direction:row;overflow-x:auto}
-  .thumb-card{min-width:200px}
+  .thumb-col{flex-direction:row;overflow-x:auto;padding-bottom:6px}
+  .thumb-card{min-width:200px;flex-shrink:0}
   .settings-grid{grid-template-columns:1fr}
+  .persons-layout{grid-template-columns:1fr}
+  .persons-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+}
+
+/* Very small screens — hide topbar stats to make room for title */
+@media(max-width:520px){
+  .topbar-stat:nth-child(3){display:none}
+}
+@media(max-width:420px){
+  .topbar-stats{display:none}
 }
 </style>
 </head>
@@ -413,7 +460,7 @@ select{
       <circle cx="16" cy="15" r="4" fill="rgba(59,130,246,0.22)"/>
       <path d="M16 12v4m-2-2h4" stroke="#3b82f6" stroke-width="1.6" stroke-linecap="round"/>
     </svg>
-    <div>HomeShield <span class="ver">v1.0</span></div>
+    <div>HomeShield</div>
   </div>
 
   <span class="sidebar-section">Monitor</span>
@@ -454,14 +501,19 @@ select{
 
 <!-- ══ TOPBAR ══ -->
 <header class="topbar">
+  <button class="burger-btn" id="burgerBtn" aria-label="Toggle menu" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" width="22" height="22"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
   <div class="topbar-title" id="topbarTitle">Live feeds</div>
   <div class="topbar-stats">
     <div class="topbar-stat"><div class="ts-label">Cameras</div><div class="ts-val" style="color:var(--success)" id="tb-cameras">–</div></div>
     <div class="topbar-stat"><div class="ts-label">Alerts</div><div class="ts-val" style="color:var(--danger)" id="tb-alerts">–</div></div>
     <div class="topbar-stat"><div class="ts-label">People</div><div class="ts-val" id="tb-people">–</div></div>
-    <div class="topbar-stat"><div class="ts-label">Model</div><div class="ts-val" id="tb-model" style="font-size:11px;letter-spacing:0;color:var(--primary);font-family:'Space Mono',monospace">–</div></div>
   </div>
 </header>
+
+<!-- Mobile sidebar backdrop -->
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
 <!-- ══ MAIN ══ -->
 <main class="main">
@@ -816,9 +868,12 @@ select{
         <h3>About HomeShield</h3>
         <p style="font-size:12px;color:var(--text-dim);line-height:1.9;font-family:'Space Mono',monospace">
           HomeShield is an intelligent, machine learning-powered CCTV surveillance system designed to protect the most vulnerable members of your household — the elderly and young children.<br><br>
-          It uses YOLOv8-Pose for GPU-accelerated person detection and skeleton keypoint estimation, with a rule-based engine for fall detection and activity classification.<br><br>
-          <span style="color:var(--text)">Version:</span> 1.0<br>
-          <span style="color:var(--text)">Developer:</span> [Your Name]<br>
+          It uses YOLOv8-Pose for GPU-accelerated person detection and skeleton keypoint estimation, with a rule-based engine for fall detection and activity classification. InsightFace powers face recognition for identifying registered family members and flagging intruders.<br><br>
+          <span style="color:var(--text)">Version:</span> 1.4.0<br>
+          <span style="color:var(--text)">Developers:</span><br>
+          &nbsp;&nbsp;• Mohammad Salehuddin bin Iwan<br>
+          &nbsp;&nbsp;• Mohammad Adli bin Tamrin<br>
+          <span style="color:var(--text)">Supervisor:</span> Andi Fitriah binti Abdul Kadir<br>
           <span style="color:var(--text)">Institution:</span> IIUM KICT
         </p>
       </div>
@@ -860,7 +915,39 @@ function showPage(page, btn) {
   if (page === 'persons') { loadPersons(); loadIntruders(); populatePersonCameraSelect(); }
   else { stopFacePreview(); }
   if (page === 'settings') { loadSettings(); loadCameraList(); }
+  // Auto-close the sidebar on mobile after picking a page
+  if (window.innerWidth <= 900) closeSidebar();
 }
+
+// ── Mobile sidebar toggle ────────────────────────────────────
+function toggleSidebar() {
+  const sb = document.querySelector('.sidebar');
+  const bd = document.getElementById('sidebarBackdrop');
+  if (!sb || !bd) return;
+  const willOpen = !sb.classList.contains('open');
+  sb.classList.toggle('open', willOpen);
+  bd.classList.toggle('show', willOpen);
+  // Prevent background scroll while the drawer is open
+  document.body.style.overflow = willOpen ? 'hidden' : '';
+}
+function closeSidebar() {
+  const sb = document.querySelector('.sidebar');
+  const bd = document.getElementById('sidebarBackdrop');
+  if (!sb || !bd) return;
+  sb.classList.remove('open');
+  bd.classList.remove('show');
+  document.body.style.overflow = '';
+}
+// Close on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.querySelector('.sidebar')?.classList.contains('open')) {
+    closeSidebar();
+  }
+});
+// Auto-close if window is resized back to desktop width
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 900) closeSidebar();
+});
 
 function toggleSystem() {
   const btn = document.getElementById('toggleBtn');
