@@ -967,7 +967,6 @@ function pollStatus() {
     document.getElementById('tb-cameras').textContent = camStr;
     document.getElementById('tb-alerts').textContent = data.alerts_today;
     document.getElementById('tb-people').textContent = data.people_count;
-    document.getElementById('tb-model').textContent = (data.model || '–').replace('.pt','');
 
     const dot = document.getElementById('statusDot');
     dot.className = 'status-dot' + (data.running ? '' : ' off');
@@ -977,7 +976,7 @@ function pollStatus() {
 
     cameraData = data.cameras;
     updateFeedsHero(data.cameras);
-  }).catch(() => {});
+  }).catch(err => console.error('pollStatus failed:', err));
 }
 
 function updateFeedsHero(cameras) {
@@ -1066,7 +1065,7 @@ function eventRow(e) {
   const badges = {fall_detected:['badge-danger','Fall detected'],lying_motionless:['badge-danger','Lying motionless'],inactivity:['badge-warning','Inactivity'],zone_entry:['badge-warning','Child in danger zone'],intruder_detected:['badge-danger','Intruder detected'],normal:['badge-success','Normal']};
   const [cls, label] = badges[e.event_type] || ['badge-info', e.event_type];
   const time = e.created_at ? new Date(e.created_at).toLocaleString() : '';
-  const snap = e.snapshot_path ? `<img class="log-snap" src="/${e.snapshot_path}" onclick="showSnapshot('${e.snapshot_path}','${label}','${time}')">` : '';
+  const snap = e.snapshot_path ? `<img class="log-snap" src="/snapshots/${e.snapshot_path}" onclick="showSnapshot('${e.snapshot_path}','${label}','${time}')">` : '';
   return `<div class="log-row">
     <span class="badge ${cls}">${label}</span>
     <span class="log-desc">${e.person_category} — ${e.camera_name||'Unknown'} ${e.details?'('+e.details+')':''}</span>
@@ -1077,7 +1076,7 @@ function eventRow(e) {
 }
 
 function showSnapshot(path, title, time) {
-  document.getElementById('modalImg').src = '/' + path;
+  document.getElementById('modalImg').src = '/snapshots/' + path;
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('modalInfo').textContent = time;
   document.getElementById('snapshotModal').classList.add('show');

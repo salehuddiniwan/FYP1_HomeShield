@@ -187,8 +187,12 @@ def processing_loop():
                     daemon=True,
                 ).start()
 
-                # Forward slashes so the URL works on Windows
-                snap_url_path = snap_path.replace("\\", "/")
+                # Store ONLY the basename in the DB.  The /snapshots/<file>
+                # route prepends Config.SNAPSHOT_DIR at serve time, and the
+                # UI renders the URL as /snapshots/<basename>.  Storing a
+                # fuller path here would break clicks (the URL would become
+                # /snapshots/static/snapshots/foo.jpg → 404).
+                snap_basename = os.path.basename(snap_path)
                 details       = event.get("zone_name", "")
 
                 db.log_event(
@@ -197,7 +201,7 @@ def processing_loop():
                     camera_name=cam.name,
                     person_category=event.get("person_category", "unknown"),
                     confidence=event.get("confidence", 0),
-                    snapshot_path=snap_url_path,
+                    snapshot_path=snap_basename,
                     alert_sent=True,
                     details=details,
                 )
@@ -633,12 +637,10 @@ def api_get_intruders():
 
 @app.route("/api/intruders/<int:intruder_id>/photo")
 def api_intruder_photo(intruder_id):
-    path = os.path.join(_INTRUDER_PHOTOS_DIR, f"intruder_{intruder_id}.jpg")
-    # Photos are written with a timestamped name; look it up from the DB.
-    row = next((i for i in db.get_intruders(include_dismissed=True, limit=500)
-                if i["intruder_id"] == intruder_id), None)
-    if row and row["photo_path"] and os.path.exists(row["photo_path"]):
-        dirpath = os.path.dirname(row["photo_path"])
+    """Serve the saved face crop for a recorded intruder."""
+    row = db.get_intruder(intruder_id)
+    if row and row.get("photo_path") and os.path.exists(row["photo_path"]):
+        dirpath  = os.path.dirname(row["photo_path"])
         filename = os.path.basename(row["photo_path"])
         return send_from_directory(dirpath, filename, max_age=0)
     return Response(b"", mimetype="image/jpeg", status=404)
@@ -681,9 +683,8 @@ def api_register_intruder(intruder_id):
     if category not in ("child", "adult", "elderly"):
         category = "adult"
 
-    # Find the intruder row
-    row = next((i for i in db.get_intruders(include_dismissed=True, limit=500)
-                if i["intruder_id"] == intruder_id), None)
+    # Find the intruder row — direct PK lookup, not a linear scan
+    row = db.get_intruder(intruder_id)
     if row is None:
         return jsonify({"error": "Intruder not found"}), 404
     photo_path = row["photo_path"]
@@ -792,7 +793,17 @@ def api_clear_events():
 
 @app.route("/snapshots/<path:filename>")
 def serve_snapshot(filename):
-    return send_from_directory(Config.SNAPSHOT_DIR, filename)
+    """
+    Serve event snapshots from Config.SNAPSHOT_DIR.
+
+    Accepts both formats for backwards compatibility:
+      • basename only (current):  fall_detected_1_20260424.jpg
+      • full path with prefix (legacy DB rows): static/snapshots/fall_detected_1_20260424.jpg
+    """
+    # Strip a leading "snapshots/" or "static/snapshots/" if it sneaks in from
+    # an old DB row, since send_from_directory already starts at SNAPSHOT_DIR.
+    base = os.path.basename(filename)
+    return send_from_directory(Config.SNAPSHOT_DIR, base)
 
 
 # ── Main ─────────────────────────────────────────────────────

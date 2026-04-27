@@ -17,12 +17,9 @@ env/
 # Environment variables (contains secrets!)
 .env
 
-# Database — contains face embeddings and registered person data
+# Database
 *.db
 *.sqlite3
-*.sqlite3-wal
-*.sqlite3-shm
-*.db-journal
 
 # YOLOv8 model weights (too large for GitHub — up to 136MB each)
 *.pt
@@ -32,8 +29,9 @@ env/
 # Models folder
 models/
 
-# Snapshots — event photos, face thumbnails, intruder captures (PRIVACY)
-snapshots/
+# Snapshots (event images)
+static/snapshots/*.jpg
+static/snapshots/*.png
 
 # IDE
 .vscode/

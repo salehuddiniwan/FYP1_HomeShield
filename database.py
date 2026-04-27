@@ -249,6 +249,15 @@ class Database:
         q += " ORDER BY detected_at DESC LIMIT ?"
         return [dict(r) for r in conn.execute(q, (limit,)).fetchall()]
 
+    def get_intruder(self, intruder_id):
+        """Direct primary-key lookup — O(1), unlike get_intruders + linear scan."""
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT * FROM intruders WHERE intruder_id = ?",
+            (intruder_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
     def dismiss_intruder(self, intruder_id):
         conn = self._get_conn()
         conn.execute(

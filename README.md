@@ -67,7 +67,7 @@ Download from [python.org](https://www.python.org/downloads/windows/) — pick t
 ### 2. Clone and create a venv
 
 ```bash
-git clone https://github.com/salehuddiniwan/FYP1_HomeShield.git
+git clone <your-repo-url> HomeShield
 cd HomeShield
 py -3.11 -m venv venv
 venv\Scripts\activate        # Windows
